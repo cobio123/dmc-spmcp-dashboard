@@ -296,10 +296,10 @@
     }).join("");
     var rest = items.length - Math.min(lim, items.length);
     note.textContent = items.length === 0
-      ? "ไม่มีคิวค้าง"
-      : items.length + " โรงเรียน" + (rest > 0 ? " (แสดง " + Math.min(lim, items.length) + " รายการแรก ในตารางด้านล่าง)" : "");
+      ? "ครบทุกโรงเรียน"
+      : "ค้าง " + items.length + " โรงเรียน" + (rest > 0 ? " · แสดง " + Math.min(lim, items.length) + " รายการแรก (ดูทั้งหมดในตารางด้านล่าง)" : "");
     empty.hidden = items.length > 0;
-    empty.textContent = "ทุกโรงเรียนยืนยันและรับรองครบแล้ว — ไม่มีคิวค้าง";
+    empty.textContent = "ทุกโรงเรียนยืนยันและรับรองข้อมูลครบแล้ว ไม่มีรายการค้าง";
     Array.prototype.forEach.call(list.querySelectorAll(".copy"), function (btn) {
       btn.addEventListener("click", function () { copyLink(btn.getAttribute("data-code")); });
     });
