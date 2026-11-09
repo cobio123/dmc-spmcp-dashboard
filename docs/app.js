@@ -107,14 +107,27 @@
 
     var h = rows[hi].map(function (c) { return String(c).trim(); });
     var iSchool = h.indexOf("โรงเรียน");
-    /* ยึดคอลัมน์ "เวลา" เป็นหลัก แล้วสถานะคือคอลัมน์ที่อยู่ก่อนหน้าติดกัน
-       เพราะหัวคอลัมน์สถานะของหน้า DMC ไม่คงที่ (เจอ "สถานะวันปิดระบบ" ปนมา) แต่เวลา/ผอ.รับรอง คงที่ */
-    var find = function (re) { for (var k = 0; k < h.length; k++) { if (re.test(h[k])) return k; } return -1; };
-    var iSchoolTime = find(/เวลาที่ยืนยัน/);
-    var iLogin = find(/login/i);
-    var iDirTime = find(/รับรอง/);
-    var iSchoolStatus = iSchoolTime > 0 ? iSchoolTime - 1 : find(/^สถานะ/);
-    var iDirStatus = iDirTime > 0 ? iDirTime - 1 : -1;
+    /* มองเฉพาะหัวคอลัมน์ที่อยู่หลังคอลัมน์โรงเรียน และชื่อสั้น (กันเซลล์หัวเรื่องยาว ๆ ที่ข้อความหน้าเว็บปนมา) */
+    var pick = function (fn) {
+      for (var k = iSchool + 1; k < h.length; k++) {
+        if (h[k] && h[k].length <= 40 && fn(h[k])) return k;
+      }
+      return -1;
+    };
+    /* รองรับ 2 หน้าตาแท็บ data:
+       (A) คัดลอกหน้า DMC มาทั้งบล็อก — มีคอลัมน์เวลา แต่หัวคอลัมน์สถานะเพี้ยน ("สถานะวันปิดระบบ")
+       (B) ตารางสถานะอย่างเดียว — หัวคอลัมน์ "Admin รร. ยืนยันข้อมูล" / "ผอ.รร. รับรองข้อมูล" และมีคอลัมน์สหวิทยาเขต
+       ยึดชื่อหัวคอลัมน์ก่อน ถ้าหาไม่ได้จึงยึดคอลัมน์เวลาที่อยู่ติดกัน */
+    var iZone = pick(function (n) { return /สหวิทยาเขต/.test(n); });
+    var iSchoolTime = pick(function (n) { return /เวลาที่ยืนยัน/.test(n); });
+    var iLogin = pick(function (n) { return /login/i.test(n); });
+    var iDirTime = pick(function (n) { return /รับรอง/.test(n) && /เวลา/.test(n); });
+    var iSchoolStatus = pick(function (n) { return /ยืนยัน/.test(n) && !/รับรอง/.test(n) && !/เวลา/.test(n); });
+    if (iSchoolStatus < 0 && iSchoolTime > 0) iSchoolStatus = iSchoolTime - 1;
+    if (iSchoolStatus < 0) iSchoolStatus = pick(function (n) { return /^สถานะ/.test(n); });
+    var iDirStatus = pick(function (n) { return /รับรอง/.test(n) && !/เวลา/.test(n); });
+    if (iDirStatus < 0 && iDirTime > 0) iDirStatus = iDirTime - 1;
+    var iNote = pick(function (n) { return /หมายเหตุ/.test(n); });
 
     var out = [];
     for (var r = hi + 1; r < rows.length; r++) {
@@ -137,17 +150,23 @@
 
       var overall = dirState === "approved" ? "approved" : (schoolState === "confirmed" ? "confirmed" : "pending");
       var meta = ZONES[code] || {};
+      var zoneInSheet = iZone >= 0 ? String(row[iZone] || "").trim() : "";
       out.push({
         code: code, name: name,
-        zone: meta.zone || "ไม่ระบุสหวิทยาเขต",
+        zone: zoneInSheet || meta.zone || "ไม่ระบุสหวิทยาเขต",
         overall: overall,
         rawSchool: String(stSchoolRaw || "").trim(),
         rawDir: String(stDirRaw || "").trim(),
+        note: iNote >= 0 ? String(row[iNote] || "").trim() : "",
         tSchool: tSchool, tDir: tDir, tLogin: tLogin,
         lastTouch: tDir || tSchool || tLogin
       });
     }
     if (!out.length) throw new Error("อ่านแถวข้อมูลไม่ได้ (พบหัวตารางแต่ไม่มีข้อมูล)");
+    /* บอกผู้เรียกว่าชีทนี้มีคอลัมน์อะไรบ้าง เพื่อไม่ให้เดาว่า "ไม่มีเวลา" = "ไม่เคยเข้าใช้" */
+    out.hasTime = out.some(function (x) { return x.tSchool || x.tDir; });
+    out.hasLogin = out.some(function (x) { return !!x.tLogin; });
+    out.hasNote = iNote >= 0;
     return out;
   }
 
@@ -156,7 +175,7 @@
     var c = { approved: 0, confirmed: 0, pending: 0, nologin: 0, total: rows.length };
     rows.forEach(function (x) {
       c[x.overall]++;
-      if (!x.tLogin) c.nologin++;
+      if (rows.hasLogin && !x.tLogin) c.nologin++;
     });
     return c;
   }
@@ -197,6 +216,8 @@
     $("kPending").textContent = c.pending;
     $("kPendingPct").textContent = "คิดเป็น " + pct(c.pending, c.total) + "%";
     $("kNoLogin").textContent = c.nologin;
+    var noLoginCard = document.querySelector(".card-blue");
+    if (noLoginCard) noLoginCard.hidden = !rows.hasLogin;
 
     var pb = $("progressBar");
     $("barOk").style.width = pct(c.approved, c.total) + "%";
@@ -247,11 +268,14 @@
         String(a.name).localeCompare(String(b.name), "th");
     });
 
+    var timeHeader = document.querySelector(".thead [role=columnheader]:nth-child(3)");
+    if (timeHeader) timeHeader.textContent = state.rows.hasTime ? "เวลาล่าสุด" : (state.rows.hasNote ? "หมายเหตุ" : "");
+
     var html = rows.map(function (x) {
       var b = BADGE[x.overall];
-      var when = x.overall === "approved" ? "รับรอง " + fmt(x.tDir)
-        : x.overall === "confirmed" ? "ยืนยัน " + fmt(x.tSchool)
-          : (x.tLogin ? "เข้าใช้ล่าสุด " + fmt(x.tLogin) : "ยังไม่เคยเข้าใช้");
+      var when = x.overall === "approved" ? (x.tDir ? "รับรอง " + fmt(x.tDir) : (x.note || ""))
+        : x.overall === "confirmed" ? (x.tSchool ? "ยืนยัน " + fmt(x.tSchool) : (x.note || ""))
+          : (state.rows.hasLogin ? (x.tLogin ? "เข้าใช้ล่าสุด " + fmt(x.tLogin) : "ยังไม่เคยเข้าใช้") : (x.note || ""));
       return '<div class="row' + (state.mine && x.code === state.mine ? " is-mine" : "") + '" role="row">' +
         '<div><div class="row-name">' + esc(x.name) + ' <span class="row-code">(' + esc(x.code) + ')</span></div>' +
         '<div class="row-zone">' + esc(x.zone) + '</div></div>' +
@@ -317,6 +341,11 @@
     var ref = dataTime || fetchedAt;
     var hours = (Date.now() - ref) / 3600000;
     var banner = $("staleBanner");
+    if (dataTime && hours < -0.5) {
+      banner.hidden = false;
+      banner.innerHTML = "เวลาข้อมูลที่ระบุ (" + fmt(dataTime) + " น.) เป็นเวลาในอนาคต — ตรวจสอบช่อง A1 ของแท็บ " + esc(cfg.tabMeta) + " อีกครั้ง";
+      return;
+    }
     if (dataTime && hours > (cfg.staleHours || 3)) {
       banner.hidden = false;
       banner.innerHTML = "ข้อมูลชุดนี้เก่ากว่า " + (cfg.staleHours || 3) + " ชั่วโมง (ข้อมูล ณ " + fmt(dataTime) +
