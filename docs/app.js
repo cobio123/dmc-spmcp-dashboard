@@ -170,6 +170,7 @@
     $("roundName").textContent = cfg.roundName || "";
     $("dataTime").textContent = dataTime ? "ข้อมูล ณ " + fmt(dataTime) + " น." : (cfg.dataNote || "ยังไม่ระบุเวลาข้อมูล");
     $("fetchedAt").textContent = "ดึงข้อมูลล่าสุด " + fmt(fetchedAt) + " น.";
+    $("fetchedAt").hidden = false;
     $("sheetLink").href = "https://docs.google.com/spreadsheets/d/" + cfg.sheetId + "/edit";
     renderCountdown();
   }
@@ -178,6 +179,7 @@
     var el = $("countdown");
     var dl = parseDeadline(cfg.deadline);
     if (dl == null) { el.hidden = true; return; }
+    el.hidden = false;
     var ms = dl - Date.now();
     if (ms <= 0) { el.textContent = "ปิดรอบแล้ว (" + fmt(dl) + " น.)"; return; }
     var mins = Math.floor(ms / 60000), days = Math.floor(mins / 1440), hrs = Math.floor((mins % 1440) / 60), mm = mins % 60;
