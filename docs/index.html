@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ติดตามการยืนยัน/รับรองข้อมูลนักเรียนรายบุคคล (DMC) — สพม.ชัยภูมิ</title>
+<meta name="description" content="แดชบอร์ดติดตามสถานะการยืนยัน/รับรองข้อมูลนักเรียนรายบุคคล ระบบ DMC สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาชัยภูมิ">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <div class="brand">
+      <img id="logo" class="logo" alt="" hidden>
+      <div>
+        <p class="org" id="org">สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาชัยภูมิ</p>
+        <h1 id="title">ติดตามการยืนยัน/รับรองข้อมูลนักเรียนรายบุคคล (DMC)</h1>
+        <p class="round"><span id="roundName">ภาคเรียนที่ 2/2569</span> · <span id="dataTime">กำลังอ่านข้อมูล…</span></p>
+      </div>
+    </div>
+    <div class="hero-meta">
+      <span class="chip chip-deadline" id="countdown">—</span>
+      <span class="chip" id="fetchedAt">—</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+  <div id="staleBanner" class="banner banner-warn" hidden></div>
+  <div id="errorBox" class="banner banner-error" hidden></div>
+  <div id="schoolView" class="banner banner-school" hidden></div>
+
+  <section class="cards" aria-label="สรุปภาพรวม">
+    <article class="card card-green">
+      <p class="card-label">ยืนยัน + ผอ.รับรองแล้ว</p>
+      <p class="card-value"><span id="kApproved">–</span><span class="card-of">/<span id="kTotal">–</span></span></p>
+      <p class="card-sub" id="kApprovedPct">–</p>
+    </article>
+    <article class="card card-amber">
+      <p class="card-label">ยืนยันแล้ว ยังไม่รับรอง</p>
+      <p class="card-value" id="kConfirmed">–</p>
+      <p class="card-sub" id="kConfirmedPct">–</p>
+    </article>
+    <article class="card card-red">
+      <p class="card-label">ยังไม่ยืนยันข้อมูล</p>
+      <p class="card-value" id="kPending">–</p>
+      <p class="card-sub" id="kPendingPct">–</p>
+    </article>
+    <article class="card card-blue">
+      <p class="card-label">ไม่มีการเข้าใช้งานเลย</p>
+      <p class="card-value" id="kNoLogin">–</p>
+      <p class="card-sub">ยังไม่ login เข้าระบบ DMC</p>
+    </article>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>ความคืบหน้ารวม</h2>
+      <span class="muted" id="progressText">–</span>
+    </div>
+    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progressBar">
+      <div class="progress-ok" id="barOk"></div>
+      <div class="progress-warn" id="barWarn"></div>
+    </div>
+    <ul class="legend">
+      <li><i class="dot dot-ok"></i>รับรองแล้ว</li>
+      <li><i class="dot dot-warn"></i>ยืนยันแล้ว ยังไม่รับรอง</li>
+      <li><i class="dot dot-bad"></i>ยังไม่ยืนยัน</li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>แยกตามสหวิทยาเขต</h2>
+      <span class="muted">นับจำนวนโรงเรียน</span>
+    </div>
+    <div id="zones" class="zones"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>รายโรงเรียน</h2>
+      <span class="muted" id="tableCount">–</span>
+    </div>
+    <div class="toolbar">
+      <label class="search">
+        <span class="sr-only">ค้นหาโรงเรียน</span>
+        <input id="search" type="search" placeholder="ค้นหาชื่อโรงเรียน หรือรหัส…" autocomplete="off">
+      </label>
+      <div class="filters" id="filters">
+        <button class="pill is-active" data-filter="all">ทั้งหมด</button>
+        <button class="pill" data-filter="approved">รับรองแล้ว</button>
+        <button class="pill" data-filter="confirmed">รอ ผอ.รับรอง</button>
+        <button class="pill" data-filter="pending">ยังไม่ยืนยัน</button>
+        <button class="pill" data-filter="nologin">ไม่เข้าใช้งาน</button>
+      </div>
+    </div>
+    <div class="table" id="table" role="table" aria-label="สถานะรายโรงเรียน">
+      <div class="thead" role="row">
+        <span role="columnheader">โรงเรียน</span>
+        <span role="columnheader">สถานะ</span>
+        <span role="columnheader">เวลาล่าสุด</span>
+        <span role="columnheader"></span>
+      </div>
+      <div id="tbody"></div>
+    </div>
+    <p class="empty" id="empty" hidden>ไม่พบโรงเรียนที่ตรงกับเงื่อนไข</p>
+  </section>
+
+  <footer class="foot">
+    <p>ข้อมูลจากระบบจัดเก็บข้อมูลนักเรียนรายบุคคล (DMC) ของ สพฐ. — หน้านี้อ่านข้อมูลจาก Google Sheet ของกลุ่มส่งเสริมการศึกษาทางไกลฯ แบบอย่างเดียว ไม่แก้ไขต้นทาง</p>
+    <p><a id="sheetLink" href="#" rel="noopener">เปิดชีทต้นทาง</a></p>
+  </footer>
+</main>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="config.js"></script>
+<script src="schools.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
