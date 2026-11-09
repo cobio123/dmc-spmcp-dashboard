@@ -59,7 +59,7 @@
   function fmt(t) {
     if (t == null) return "—";
     var d = new Date(t + TZ);
-    return d.getUTCDate() + " " + MONTH_NAMES[d.getUTCMonth()] + " " + String(d.getUTCFullYear() + 543).slice(-2) +
+    return d.getUTCDate() + " " + MONTH_NAMES[d.getUTCMonth()] + " " + (d.getUTCFullYear() + 543) +
       " " + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes());
   }
 
@@ -264,13 +264,8 @@
     }
     var left = c.confirmed + c.pending;
     if (!c.total) { h.textContent = "ไม่พบข้อมูลโรงเรียน"; return; }
-    if (left === 0) { h.textContent = "ทั้ง " + c.total + " โรงเรียน ยืนยันและรับรองข้อมูลครบแล้ว"; return; }
-    h.textContent = "ยังเหลือ " + left + " โรงเรียนที่ต้องปิดข้อมูล ก่อน " + dlLabel();
-  }
-
-  function dlLabel() {
-    var dl = parseDeadline(cfg.deadline);
-    return dl == null ? "กำหนดส่ง" : fmt(dl).replace(/(\d{2}:\d{2}).*/, "$1") + " น.";
+    if (left === 0) { h.textContent = "ทั้ง " + c.total + " โรงเรียน ยืนยันและรับรองข้อมูลครบถ้วนแล้ว"; return; }
+    h.textContent = "ยังมีอีก " + left + " โรงเรียนที่ยืนยันและรับรองข้อมูลไม่ครบ";
   }
 
   /* คิวงาน: โรงเรียนที่ยังไม่จบ ยกขึ้นก่อนตารางทั้งเขต */
@@ -296,10 +291,10 @@
     }).join("");
     var rest = items.length - Math.min(lim, items.length);
     note.textContent = items.length === 0
-      ? "ครบทุกโรงเรียน"
-      : "ค้าง " + items.length + " โรงเรียน" + (rest > 0 ? " · แสดง " + Math.min(lim, items.length) + " รายการแรก (ดูทั้งหมดในตารางด้านล่าง)" : "");
+      ? ""
+      : "ค้างดำเนินการ " + items.length + " โรงเรียน" + (rest > 0 ? " · แสดง " + Math.min(lim, items.length) + " จาก " + items.length + " รายการ (ดูทั้งหมดในตารางด้านล่าง)" : "");
     empty.hidden = items.length > 0;
-    empty.textContent = "ทุกโรงเรียนยืนยันและรับรองข้อมูลครบแล้ว ไม่มีรายการค้าง";
+    empty.textContent = "ทุกโรงเรียนยืนยันและได้รับการรับรองข้อมูลครบถ้วนแล้ว";
     Array.prototype.forEach.call(list.querySelectorAll(".copy"), function (btn) {
       btn.addEventListener("click", function () { copyLink(btn.getAttribute("data-code")); });
     });
@@ -307,7 +302,7 @@
 
   var BADGE = {
     approved: { cls: "badge-ok", label: "รับรองแล้ว" },
-    confirmed: { cls: "badge-warn", label: "รอ ผอ.รับรอง" },
+    confirmed: { cls: "badge-warn", label: "ยืนยันแล้ว รอรับรอง" },
     pending: { cls: "badge-bad", label: "ยังไม่ยืนยัน" }
   };
 

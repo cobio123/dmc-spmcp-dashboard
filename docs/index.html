@@ -32,7 +32,7 @@
 
   <section class="block" aria-labelledby="hStatus">
     <div class="block-head">
-      <h2 id="hStatus">สถานะรวมทั้งเขต</h2>
+      <h2 id="hStatus">ภาพรวมทั้งเขตพื้นที่การศึกษา</h2>
     </div>
     <div class="band">
       <div class="band-track" id="progressBar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
@@ -40,8 +40,8 @@
         <span class="band-seg seg-warn" id="barWarn"><b id="barWarnNum"></b></span>
       </div>
       <p class="band-key">
-        <span class="key"><i class="key-dot ok"></i>รับรองครบ <b id="kApproved">–</b>/<b id="kTotal">–</b> โรงเรียน</span>
-        <span class="key"><i class="key-dot warn"></i>รอ ผอ.รับรอง <b id="kConfirmed">–</b></span>
+        <span class="key"><i class="key-dot ok"></i>รับรองแล้ว <b id="kApproved">–</b>/<b id="kTotal">–</b> โรงเรียน</span>
+        <span class="key"><i class="key-dot warn"></i>ยืนยันแล้ว รอรับรอง <b id="kConfirmed">–</b></span>
         <span class="key"><i class="key-dot bad"></i>ยังไม่ยืนยัน <b id="kPending">–</b></span>
         <span class="key" id="noLoginItem" hidden><i class="key-dot idle"></i>ไม่เคยเข้าใช้ <b id="kNoLogin">–</b></span>
       </p>
@@ -51,7 +51,7 @@
 
   <section class="block" aria-labelledby="hQueue">
     <div class="block-head">
-      <h2 id="hQueue">โรงเรียนที่ยังไม่ปิดข้อมูล</h2>
+      <h2 id="hQueue">โรงเรียนที่ข้อมูลยังไม่ครบ</h2>
       <p class="meta" id="queueNote">—</p>
     </div>
     <ul class="queue" id="queueList"></ul>
@@ -67,7 +67,7 @@
 
   <section class="block" aria-labelledby="hAll">
     <div class="block-head">
-      <h2 id="hAll">รายโรงเรียน</h2>
+      <h2 id="hAll">รายละเอียดรายโรงเรียน</h2>
       <p class="meta" id="tableCount">—</p>
     </div>
     <div class="toolbar">
@@ -78,7 +78,7 @@
       <div class="filters" id="filters">
         <button class="pill is-active" data-filter="all" type="button">ทั้งหมด</button>
         <button class="pill" data-filter="approved" type="button">รับรองแล้ว</button>
-        <button class="pill" data-filter="confirmed" type="button">รอ ผอ.รับรอง</button>
+        <button class="pill" data-filter="confirmed" type="button">ยืนยันแล้ว รอรับรอง</button>
         <button class="pill" data-filter="pending" type="button">ยังไม่ยืนยัน</button>
         <button class="pill" data-filter="nologin" type="button" id="pillNoLogin" hidden>ไม่เข้าใช้งาน</button>
       </div>
