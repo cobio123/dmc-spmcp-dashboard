@@ -5,86 +5,71 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ติดตามการยืนยัน/รับรองข้อมูลนักเรียนรายบุคคล (DMC) — สพม.ชัยภูมิ</title>
 <meta name="description" content="แดชบอร์ดติดตามสถานะการยืนยัน/รับรองข้อมูลนักเรียนรายบุคคล ระบบ DMC สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาชัยภูมิ">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#f7f8fa">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header class="hero">
+<header class="masthead">
+  <div class="wrap mast-row">
+    <img class="crest" id="logo" alt="ตราสำนักงานเขตพื้นที่การศึกษามัธยมศึกษาชัยภูมิ" hidden>
+    <div class="mast-id">
+      <p class="org" id="org">สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาชัยภูมิ</p>
+      <p class="round"><span id="roundName">ภาคเรียนที่ 2/2569</span><span class="sep">·</span><span id="dataTime">กำลังอ่านข้อมูล…</span></p>
+    </div>
+  </div>
   <div class="wrap">
-    <div class="brand">
-      <img id="logo" class="logo" alt="" hidden>
-      <div>
-        <p class="org" id="org">สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาชัยภูมิ</p>
-        <h1 id="title">ติดตามการยืนยัน/รับรองข้อมูลนักเรียนรายบุคคล (DMC)</h1>
-        <p class="round"><span id="roundName">ภาคเรียนที่ 2/2569</span> · <span id="dataTime">กำลังอ่านข้อมูล…</span></p>
-      </div>
-    </div>
-    <div class="hero-meta">
-      <span class="chip chip-deadline" id="countdown" hidden>—</span>
-      <span class="chip" id="fetchedAt" hidden>—</span>
-    </div>
+    <h1 class="headline" id="headline">กำลังอ่านข้อมูล…</h1>
+    <p class="deck"><span id="title">ติดตามการยืนยัน/รับรองข้อมูลนักเรียนรายบุคคล (DMC)</span> · แสดงเฉพาะข้อมูลรวมระดับโรงเรียน</p>
+    <p class="deadline" id="countdown" hidden></p>
   </div>
 </header>
 
-<main class="wrap" id="main">
+<main class="wrap">
   <div id="noticeBanner" class="banner banner-info" hidden></div>
   <div id="staleBanner" class="banner banner-warn" hidden></div>
   <div id="errorBox" class="banner banner-error" hidden></div>
   <div id="schoolView" class="banner banner-school" hidden></div>
 
-  <section class="cards" aria-label="สรุปภาพรวม">
-    <article class="card card-green">
-      <p class="card-label">ยืนยัน + ผอ.รับรองแล้ว</p>
-      <p class="card-value"><span id="kApproved">–</span><span class="card-of">/<span id="kTotal">–</span></span></p>
-      <p class="card-sub" id="kApprovedPct">–</p>
-    </article>
-    <article class="card card-amber">
-      <p class="card-label">ยืนยันแล้ว ยังไม่รับรอง</p>
-      <p class="card-value" id="kConfirmed">–</p>
-      <p class="card-sub" id="kConfirmedPct">–</p>
-    </article>
-    <article class="card card-red">
-      <p class="card-label">ยังไม่ยืนยันข้อมูล</p>
-      <p class="card-value" id="kPending">–</p>
-      <p class="card-sub" id="kPendingPct">–</p>
-    </article>
-    <article class="card card-blue">
-      <p class="card-label">ไม่มีการเข้าใช้งานเลย</p>
-      <p class="card-value" id="kNoLogin">–</p>
-      <p class="card-sub">ยังไม่ login เข้าระบบ DMC</p>
-    </article>
+  <section class="block" aria-labelledby="hStatus">
+    <div class="block-head">
+      <h2 id="hStatus">สถานะรวมทั้งเขต</h2>
+    </div>
+    <div class="band">
+      <div class="band-track" id="progressBar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <span class="band-seg seg-ok" id="barOk"><b id="barOkNum"></b></span>
+        <span class="band-seg seg-warn" id="barWarn"><b id="barWarnNum"></b></span>
+      </div>
+      <p class="band-key">
+        <span class="key"><i class="key-dot ok"></i>รับรองครบ <b id="kApproved">–</b>/<b id="kTotal">–</b> โรงเรียน</span>
+        <span class="key"><i class="key-dot warn"></i>รอ ผอ.รับรอง <b id="kConfirmed">–</b></span>
+        <span class="key"><i class="key-dot bad"></i>ยังไม่ยืนยัน <b id="kPending">–</b></span>
+        <span class="key" id="noLoginItem" hidden><i class="key-dot idle"></i>ไม่เคยเข้าใช้ <b id="kNoLogin">–</b></span>
+      </p>
+      <p class="band-foot"><span id="progressText">–</span><span class="footsep"> · </span><span id="fetchedAt" hidden>—</span></p>
+    </div>
   </section>
 
-  <section class="panel">
-    <div class="panel-head">
-      <h2>ความคืบหน้ารวม</h2>
-      <span class="muted" id="progressText">–</span>
+  <section class="block" aria-labelledby="hQueue">
+    <div class="block-head">
+      <h2 id="hQueue">ต้องทำต่อตอนนี้</h2>
+      <p class="meta" id="queueNote">—</p>
     </div>
-    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progressBar">
-      <div class="progress-ok" id="barOk"></div>
-      <div class="progress-warn" id="barWarn"></div>
-    </div>
-    <ul class="legend">
-      <li><i class="dot dot-ok"></i>รับรองแล้ว</li>
-      <li><i class="dot dot-warn"></i>ยืนยันแล้ว ยังไม่รับรอง</li>
-      <li><i class="dot dot-bad"></i>ยังไม่ยืนยัน</li>
-    </ul>
+    <ul class="queue" id="queueList"></ul>
+    <p class="empty" id="queueEmpty" hidden></p>
   </section>
 
-  <section class="panel">
-    <div class="panel-head">
-      <h2>แยกตามสหวิทยาเขต</h2>
-      <span class="muted">นับจำนวนโรงเรียน</span>
+  <section class="block" aria-labelledby="hZones">
+    <div class="block-head">
+      <h2 id="hZones">แยกตามสหวิทยาเขต</h2>
+      <p class="meta">นับจำนวนโรงเรียน · เรียงจากค้างมากสุด</p>
     </div>
     <div id="zones" class="zones"></div>
   </section>
 
-  <section class="panel">
-    <div class="panel-head">
-      <h2>รายโรงเรียน</h2>
-      <span class="muted" id="tableCount">–</span>
+  <section class="block" aria-labelledby="hAll">
+    <div class="block-head">
+      <h2 id="hAll">รายโรงเรียน</h2>
+      <p class="meta" id="tableCount">—</p>
     </div>
     <div class="toolbar">
       <label class="search">
@@ -92,11 +77,11 @@
         <input id="search" type="search" placeholder="ค้นหาชื่อโรงเรียน หรือรหัส…" autocomplete="off">
       </label>
       <div class="filters" id="filters">
-        <button class="pill is-active" data-filter="all">ทั้งหมด</button>
-        <button class="pill" data-filter="approved">รับรองแล้ว</button>
-        <button class="pill" data-filter="confirmed">รอ ผอ.รับรอง</button>
-        <button class="pill" data-filter="pending">ยังไม่ยืนยัน</button>
-        <button class="pill" data-filter="nologin">ไม่เข้าใช้งาน</button>
+        <button class="pill is-active" data-filter="all" type="button">ทั้งหมด</button>
+        <button class="pill" data-filter="approved" type="button">รับรองแล้ว</button>
+        <button class="pill" data-filter="confirmed" type="button">รอ ผอ.รับรอง</button>
+        <button class="pill" data-filter="pending" type="button">ยังไม่ยืนยัน</button>
+        <button class="pill" data-filter="nologin" type="button" id="pillNoLogin" hidden>ไม่เข้าใช้งาน</button>
       </div>
     </div>
     <div class="table" id="table" role="table" aria-label="สถานะรายโรงเรียน">
@@ -112,7 +97,7 @@
   </section>
 
   <footer class="foot">
-    <p>ข้อมูลจากระบบจัดเก็บข้อมูลนักเรียนรายบุคคล (DMC) ของ สพฐ. — หน้านี้อ่านข้อมูลจาก Google Sheet ของกลุ่มส่งเสริมการศึกษาทางไกลฯ แบบอย่างเดียว ไม่แก้ไขต้นทาง</p>
+    <p>ข้อมูลจากระบบจัดเก็บข้อมูลนักเรียนรายบุคคล (DMC) ของ สพฐ. · หน้านี้อ่านข้อมูลจาก Google Sheet ของกลุ่มส่งเสริมการศึกษาทางไกลฯ แบบอย่างเดียว ไม่แก้ไขต้นทาง และไม่แสดงข้อมูลนักเรียนรายคน</p>
     <p><a id="sheetLink" href="#" rel="noopener">เปิดชีทต้นทาง</a></p>
   </footer>
 </main>
