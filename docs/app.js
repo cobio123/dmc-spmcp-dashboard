@@ -243,7 +243,7 @@
     $("zones").innerHTML = list.map(function (z) {
       return '<div class="zone">' +
         '<div class="zone-head"><span class="zone-name">' + esc(z.name) + '</span>' +
-        '<span class="zone-num">รับรอง ' + z.approved + '/' + z.total + ' · ค้าง ' + (z.confirmed + z.pending) + '</span></div>' +
+        '<span class="zone-num">รับรอง ' + z.approved + '/' + z.total + ' โรงเรียน · ยังไม่ครบ ' + (z.confirmed + z.pending) + '</span></div>' +
         '<span class="zone-bar">' +
         '<i class="zone-ok" style="width:' + pct(z.approved, z.total) + '%"></i>' +
         '<i class="zone-warn" style="width:' + pct(z.confirmed, z.total) + '%"></i>' +
