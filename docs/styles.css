@@ -28,6 +28,7 @@ h1{margin:2px 0 6px;font-size:1.3rem;line-height:1.32;font-weight:700}
 /* banners */
 .banner{margin:16px 0 0;padding:11px 14px;border-radius:12px;font-size:.9rem;border:1px solid}
 .banner-warn{background:var(--warn-bg);border-color:#f3d18a;color:#7c4a03}
+.banner-info{background:#e8eefb;border-color:#b8cdf3;color:#12306b}
 .banner-error{background:var(--bad-bg);border-color:#f5b5b5;color:#7f1d1d}
 .banner-school{background:#e0e9fb;border-color:#b8cdf3;color:#12306b;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
 .banner-school strong{font-weight:600}

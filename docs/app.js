@@ -163,6 +163,8 @@
 
   function renderHeader(dataTime, fetchedAt) {
     $("org").textContent = cfg.org || "";
+    var nb = $("noticeBanner");
+    if (cfg.notice) { nb.hidden = false; nb.textContent = cfg.notice; } else { nb.hidden = true; }
     if (cfg.title) $("title").textContent = cfg.title;
     if (cfg.logo) { var lg = $("logo"); lg.src = cfg.logo; lg.hidden = false; }
     $("roundName").textContent = cfg.roundName || "";
