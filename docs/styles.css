@@ -38,7 +38,7 @@ h1{margin:2px 0 6px;font-size:1.3rem;line-height:1.32;font-weight:700}
 main{padding-bottom:28px}
 
 /* cards */
-.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:16px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px}
 .card{background:var(--card);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);border-top:4px solid var(--line)}
 .card-green{border-top-color:var(--ok)} .card-amber{border-top-color:var(--warn)}
 .card-red{border-top-color:var(--bad)} .card-blue{border-top-color:var(--navy-2)}
