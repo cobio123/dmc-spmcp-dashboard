@@ -89,6 +89,8 @@
   function statusOf(raw, time) {
     var v = String(raw || "").trim();
     if (v) {
+      /* "ยังไม่ยืนยัน" / "ยังไม่รับรอง" มีคำว่า ยืนยัน/รับรอง อยู่ด้วย ต้องจับคำปฏิเสธก่อน */
+      if (/ยังไม่|ไม่ได้|^ไม่/.test(v)) return "pending";
       if (/รับรอง/.test(v)) return "approved";
       if (/ยืนยัน/.test(v)) return "confirmed";
       return "pending";
@@ -171,6 +173,30 @@
   }
 
   /* ---------- render ---------- */
+  var BADGE = {
+    approved: { cls: "badge-ok", label: "รับรองแล้ว" },
+    confirmed: { cls: "badge-warn", label: "ยืนยันแล้ว รอรับรอง" },
+    pending: { cls: "badge-bad", label: "ยังไม่ยืนยัน" }
+  };
+  var ICON_LINK = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6.5 9.5a3 3 0 0 0 4.2 0l2.1-2.1a3 3 0 0 0-4.2-4.2l-.9.9"/><path d="M9.5 6.5a3 3 0 0 0-4.2 0L3.2 8.6a3 3 0 0 0 4.2 4.2l.9-.9"/></svg>';
+
+  function schoolUrl(code) { return location.pathname + "?school=" + encodeURIComponent(code); }
+  function copyBtn(x) {
+    return '<button class="copy" data-code="' + esc(x.code) + '" type="button" aria-label="คัดลอกลิงก์ของโรงเรียน' + esc(x.name) + '">' +
+      ICON_LINK + '<span>คัดลอกลิงก์</span></button>';
+  }
+  function nameLink(x) {
+    return x.code ? '<a href="' + esc(schoolUrl(x.code)) + '">' + esc(x.name) + '</a>' : esc(x.name);
+  }
+  /* ข้อความเวลา/หมายเหตุของแต่ละโรงเรียน ใช้ร่วมกันทั้งคิวงาน ตาราง และมุมมองโรงเรียน */
+  function whenOf(x, rows) {
+    if (x.overall === "approved") return x.tDir ? "รับรอง " + fmt(x.tDir) + " น." : (x.note || "");
+    if (x.overall === "confirmed") return x.tSchool ? "ยืนยัน " + fmt(x.tSchool) + " น." : (x.note || "");
+    if (rows.hasLogin) return x.tLogin ? "เข้าใช้ล่าสุด " + fmt(x.tLogin) + " น." : "";
+    return x.note || "";
+  }
+  function neverLogged(x, rows) { return rows.hasLogin && !x.tLogin && x.overall === "pending"; }
+
   function counts(rows) {
     var c = { approved: 0, confirmed: 0, pending: 0, nologin: 0, total: rows.length };
     rows.forEach(function (x) {
@@ -188,10 +214,15 @@
     if (cfg.logo) { var lg = $("logo"); lg.src = cfg.logo; lg.hidden = false; }
     $("roundName").textContent = cfg.roundName || "";
     $("dataTime").textContent = dataTime ? "ข้อมูล ณ " + fmt(dataTime) + " น." : (cfg.dataNote || "ยังไม่ระบุเวลาข้อมูล");
-    $("fetchedAt").textContent = "ดึงข้อมูลล่าสุด " + fmt(fetchedAt) + " น.";
+    $("fetchedAt").textContent = "หน้านี้ดึงข้อมูลล่าสุดเมื่อ " + fmt(fetchedAt) + " น.";
     $("fetchedAt").hidden = false;
     $("sheetLink").href = "https://docs.google.com/spreadsheets/d/" + cfg.sheetId + "/edit";
     renderCountdown();
+  }
+
+  function deadlineText() {
+    var dl = parseDeadline(cfg.deadline);
+    return dl == null ? "" : fmt(dl) + " น.";
   }
 
   function renderCountdown() {
@@ -200,36 +231,51 @@
     if (dl == null) { el.hidden = true; return; }
     el.hidden = false;
     var ms = dl - Date.now();
-    if (ms <= 0) { el.textContent = "ปิดรอบแล้ว (" + fmt(dl) + " น.)"; return; }
+    el.classList.toggle("is-over", ms <= 0);
+    el.classList.toggle("is-near", ms > 0 && ms < 24 * 3600000);
+    if (ms <= 0) {
+      $("cdLeft").textContent = "ครบกำหนดแล้ว";
+      $("cdAt").textContent = "กำหนด " + fmt(dl) + " น.";
+      return;
+    }
     var mins = Math.floor(ms / 60000), days = Math.floor(mins / 1440), hrs = Math.floor((mins % 1440) / 60), mm = mins % 60;
-    var txt = days > 0 ? days + " วัน " + hrs + " ชม." : (hrs > 0 ? hrs + " ชม. " + mm + " น." : mm + " นาที");
-    el.textContent = "เหลืออีก " + txt + " ถึงกำหนด " + fmt(dl) + " น.";
+    var txt = days > 0 ? days + " วัน " + hrs + " ชม." : (hrs > 0 ? hrs + " ชม. " + mm + " นาที" : mm + " นาที");
+    $("cdLeft").textContent = "เหลือเวลา " + txt;
+    $("cdAt").textContent = "ถึงกำหนด " + fmt(dl) + " น.";
   }
 
   function renderSummary(rows) {
     var c = counts(rows);
     $("kApproved").textContent = c.approved;
-    $("kTotal").textContent = c.total;
     $("kConfirmed").textContent = c.confirmed;
     $("kPending").textContent = c.pending;
     $("kNoLogin").textContent = c.nologin;
-    $("noLoginItem").hidden = !rows.hasLogin;
-    var pillNoLogin = $("pillNoLogin");
-    if (pillNoLogin) pillNoLogin.hidden = !rows.hasLogin;
+    $("noLoginItem").hidden = !rows.hasLogin || !c.nologin;
+    $("pillNoLogin").hidden = !rows.hasLogin;
+    Array.prototype.forEach.call(document.querySelectorAll(".pill-n"), function (n) {
+      var k = n.getAttribute("data-n");
+      n.textContent = k === "all" ? c.total : c[k];
+    });
 
-    var pb = $("progressBar");
-    var pa = pct(c.approved, c.total), pw = pct(c.confirmed, c.total);
-    $("barOk").style.width = pa + "%";
-    $("barWarn").style.width = pw + "%";
+    /* ความกว้างใช้สัดส่วนจริง (ไม่ปัด) เพื่อให้สามส่วนรวมกันเต็มแถบพอดี */
+    var fa = c.total ? c.approved / c.total * 100 : 0, fw = c.total ? c.confirmed / c.total * 100 : 0;
+    $("barOk").style.width = fa + "%";
+    $("barWarn").style.width = fw + "%";
     $("barOkNum").textContent = c.approved;
     $("barWarnNum").textContent = c.confirmed;
-    $("barOk").classList.toggle("no-num", pa < 12);
-    $("barWarn").classList.toggle("no-num", pw < 12);
-    pb.setAttribute("aria-valuenow", pct(c.approved, c.total));
-    $("progressText").textContent = c.approved + "/" + c.total + " โรงเรียน (" + pct(c.approved, c.total) + "%)";
+    $("barBadNum").textContent = c.pending;
+    $("barOk").classList.toggle("no-num", fa < 8);
+    $("barWarn").classList.toggle("no-num", fw < 8);
+    $("barBad").classList.toggle("no-num", !c.total || c.pending / c.total < .08);
+    $("progressBar").setAttribute("aria-label",
+      "รับรองแล้ว " + c.approved + " ยืนยันแล้วรอรับรอง " + c.confirmed + " ยังไม่ยืนยัน " + c.pending + " จาก " + c.total + " โรงเรียน");
+    $("progressText").textContent = "รับรองแล้ว " + c.approved + " จาก " + c.total + " โรงเรียน (" + pct(c.approved, c.total) + "%)";
     renderHeadline(c);
-    renderQueue(rows, c);
+    renderQueue(rows);
+    renderZones(rows);
+  }
 
+  function renderZones(rows) {
     var zones = {};
     rows.forEach(function (x) {
       var z = zones[x.zone] || (zones[x.zone] = { name: x.zone, approved: 0, confirmed: 0, pending: 0, total: 0 });
@@ -239,28 +285,33 @@
       .sort(function (a, b) {
         return ((b.pending + b.confirmed) - (a.pending + a.confirmed)) || (b.pending - a.pending) || a.name.localeCompare(b.name, "th");
       });
-
     $("zones").innerHTML = list.map(function (z) {
-      return '<div class="zone">' +
-        '<div class="zone-head"><span class="zone-name">' + esc(z.name) + '</span>' +
-        '<span class="zone-num">รับรอง ' + z.approved + '/' + z.total + ' โรงเรียน · ยังไม่ครบ ' + (z.confirmed + z.pending) + '</span></div>' +
-        '<span class="zone-bar">' +
-        '<i class="zone-ok" style="width:' + pct(z.approved, z.total) + '%"></i>' +
-        '<i class="zone-warn" style="width:' + pct(z.confirmed, z.total) + '%"></i>' +
-        '<i class="zone-bad" style="width:' + pct(z.pending, z.total) + '%"></i>' +
-        '</span></div>';
+      var left = z.confirmed + z.pending;
+      return '<li class="zone' + (left ? "" : " is-done") + '">' +
+        '<span class="zone-name">' + esc(z.name) + '</span>' +
+        '<span class="zone-num">รับรอง <b>' + z.approved + '</b>/' + z.total +
+        (left ? ' · ยังไม่ครบ <b>' + left + '</b>' : ' · ครบแล้ว') + '</span>' +
+        '<span class="zone-bar" aria-hidden="true">' +
+        '<i class="zone-ok" style="width:' + (z.approved / z.total * 100) + '%"></i>' +
+        '<i class="zone-warn" style="width:' + (z.confirmed / z.total * 100) + '%"></i>' +
+        '</span></li>';
     }).join("");
+  }
+
+  function mineRow() {
+    if (!state.mine) return null;
+    return state.rows.filter(function (x) { return x.code === state.mine; })[0] || null;
   }
 
   /* พาดหัวบอกเรื่องจริงของข้อมูล ไม่ใช่คำโปรยตายตัว */
   function renderHeadline(c) {
     var h = $("headline");
-    if (state.mine) {
-      var row = state.rows.filter(function (x) { return x.code === state.mine; })[0];
-      if (row) {
-        h.textContent = row.name + " — " + BADGE[row.overall].label;
-        return;
-      }
+    var row = mineRow();
+    if (row) {
+      h.textContent = row.overall === "approved" ? row.name + " รับรองข้อมูลครบแล้ว"
+        : row.overall === "confirmed" ? row.name + " ยืนยันแล้ว รอ ผอ. รับรอง"
+          : row.name + " ยังไม่ยืนยันข้อมูล";
+      return;
     }
     var left = c.confirmed + c.pending;
     if (!c.total) { h.textContent = "ไม่พบข้อมูลโรงเรียน"; return; }
@@ -268,43 +319,49 @@
     h.textContent = "ยังมีอีก " + left + " โรงเรียนที่ยืนยันและรับรองข้อมูลไม่ครบ";
   }
 
-  /* คิวงาน: โรงเรียนที่ยังไม่จบ ยกขึ้นก่อนตารางทั้งเขต */
-  function renderQueue(rows, c) {
-    var list = $("queueList"), empty = $("queueEmpty"), note = $("queueNote");
-    var items = rows.filter(function (x) { return x.overall !== "approved"; })
-      .sort(function (a, b) {
-        var rank = { pending: 0, confirmed: 1 };
-        return (rank[a.overall] - rank[b.overall]) || String(a.zone).localeCompare(String(b.zone), "th");
+  /* คิวงาน: แยกตามว่าใครต้องทำต่อ — โรงเรียนต้องยืนยัน หรือ ผอ. ต้องรับรอง */
+  var QUEUE_LIMIT = 6;
+  function renderQueue(rows) {
+    var box = $("queue"), empty = $("queueEmpty");
+    var groups = [
+      { key: "pending", title: "ยังไม่ยืนยัน", hint: "Admin โรงเรียนต้องเข้าระบบ DMC และกดยืนยันข้อมูล" },
+      { key: "confirmed", title: "ยืนยันแล้ว รอรับรอง", hint: "ผอ.โรงเรียนต้องเข้าระบบ DMC และรับรองข้อมูล" }
+    ];
+    var total = 0;
+    box.innerHTML = groups.map(function (g) {
+      var items = rows.filter(function (x) { return x.overall === g.key; }).sort(function (a, b) {
+        /* โรงเรียนที่ไม่เคยเข้าใช้ขึ้นก่อน เพราะต้องโทรตามก่อน */
+        return (neverLogged(b, rows) - neverLogged(a, rows)) || String(a.zone).localeCompare(String(b.zone), "th") ||
+          String(a.name).localeCompare(String(b.name), "th");
       });
-    var lim = 8;
-    list.innerHTML = items.slice(0, lim).map(function (x) {
-      var b = BADGE[x.overall];
-      var when = x.overall === "confirmed"
-        ? (x.tSchool ? "ยืนยัน " + fmt(x.tSchool) : (x.note || ""))
-        : (rows.hasLogin ? (x.tLogin ? "เข้าใช้ล่าสุด " + fmt(x.tLogin) : "ยังไม่เคยเข้าใช้") : (x.note || ""));
-      return '<li class="q-item">' +
-        '<span class="q-name">' + esc(x.name) + '</span>' +
-        '<span class="q-zone">' + esc(x.zone) + '<span class="q-time">' + (when ? " · " + esc(when) : "") + '</span></span>' +
-        '<span class="q-actions"><span class="badge ' + b.cls + '">' + b.label + '</span>' +
-        '<button class="copy" data-code="' + esc(x.code) + '" type="button">คัดลอกลิงก์</button></span>' +
-        '</li>';
+      total += items.length;
+      if (!items.length) return "";
+      var extra = items.length - QUEUE_LIMIT;
+      return '<div class="q-group is-' + g.key + '">' +
+        '<div class="q-head"><h3 class="q-title">' + g.title + '</h3><span class="q-count">' + items.length + '</span></div>' +
+        '<p class="q-hint">' + g.hint + '</p>' +
+        '<ul class="q-list">' + items.map(function (x, i) {
+          var when = whenOf(x, rows);
+          var sub = esc(x.zone) + (neverLogged(x, rows) ? '<span class="q-when q-flag">ยังไม่เคยเข้าใช้ระบบ</span>' : (when ? '<span class="q-when">' + esc(when) + '</span>' : ""));
+          return '<li class="q-item' + (i >= QUEUE_LIMIT ? " is-extra" : "") + '">' +
+            '<div><div class="q-name">' + nameLink(x) + '</div><div class="q-sub">' + sub + '</div></div>' +
+            copyBtn(x) + '</li>';
+        }).join("") + '</ul>' +
+        (extra > 0 ? '<button class="more" type="button" aria-expanded="false" data-more="' + extra + '">แสดงอีก ' + extra + ' โรงเรียน</button>' : "") +
+        '</div>';
     }).join("");
-    var rest = items.length - Math.min(lim, items.length);
-    note.textContent = items.length === 0
-      ? ""
-      : "ค้างดำเนินการ " + items.length + " โรงเรียน" + (rest > 0 ? " · แสดง " + Math.min(lim, items.length) + " จาก " + items.length + " รายการ (ดูทั้งหมดในตารางด้านล่าง)" : "");
-    empty.hidden = items.length > 0;
+    $("queueNote").textContent = total ? "รวม " + total + " โรงเรียน" : "";
+    empty.hidden = total > 0;
     empty.textContent = "ทุกโรงเรียนยืนยันและได้รับการรับรองข้อมูลครบถ้วนแล้ว";
-    Array.prototype.forEach.call(list.querySelectorAll(".copy"), function (btn) {
-      btn.addEventListener("click", function () { copyLink(btn.getAttribute("data-code")); });
+    Array.prototype.forEach.call(box.querySelectorAll(".more"), function (btn) {
+      btn.addEventListener("click", function () {
+        var g = btn.parentNode, open = !g.classList.contains("is-open");
+        g.classList.toggle("is-open", open);
+        btn.setAttribute("aria-expanded", String(open));
+        btn.textContent = open ? "ย่อรายการ" : "แสดงอีก " + btn.getAttribute("data-more") + " โรงเรียน";
+      });
     });
   }
-
-  var BADGE = {
-    approved: { cls: "badge-ok", label: "รับรองแล้ว" },
-    confirmed: { cls: "badge-warn", label: "ยืนยันแล้ว รอรับรอง" },
-    pending: { cls: "badge-bad", label: "ยังไม่ยืนยัน" }
-  };
 
   function renderTable() {
     var q = state.q.trim().toLowerCase();
@@ -323,35 +380,34 @@
         String(a.name).localeCompare(String(b.name), "th");
     });
 
-    var timeHeader = document.querySelector(".thead [role=columnheader]:nth-child(3)");
-    if (timeHeader) timeHeader.textContent = state.rows.hasTime ? "เวลาล่าสุด" : (state.rows.hasNote ? "หมายเหตุ" : "");
+    $("timeHead").textContent = state.rows.hasTime ? "เวลาล่าสุด" : (state.rows.hasNote ? "หมายเหตุ" : "");
 
-    var html = rows.map(function (x) {
+    $("tbody").innerHTML = rows.map(function (x) {
       var b = BADGE[x.overall];
-      var when = x.overall === "approved" ? (x.tDir ? "รับรอง " + fmt(x.tDir) : (x.note || ""))
-        : x.overall === "confirmed" ? (x.tSchool ? "ยืนยัน " + fmt(x.tSchool) : (x.note || ""))
-          : (state.rows.hasLogin ? (x.tLogin ? "เข้าใช้ล่าสุด " + fmt(x.tLogin) : "ยังไม่เคยเข้าใช้") : (x.note || ""));
+      var when = neverLogged(x, state.rows) ? "ยังไม่เคยเข้าใช้ระบบ" : whenOf(x, state.rows);
       return '<div class="row' + (state.mine && x.code === state.mine ? " is-mine" : "") + '" role="row">' +
-        '<div><div class="row-name">' + esc(x.name) + ' <span class="row-code">(' + esc(x.code) + ')</span></div>' +
-        '<div class="row-zone">' + esc(x.zone) + '</div></div>' +
-        '<div><span class="badge ' + b.cls + '">' + b.label + '</span></div>' +
-        '<div class="row-time">' + esc(when) + '</div>' +
-        '<button class="copy" data-code="' + esc(x.code) + '" type="button">คัดลอกลิงก์</button>' +
+        '<div class="row-main" role="cell"><div class="row-name">' + nameLink(x) + '</div>' +
+        '<div class="row-meta">' + esc(x.zone) + (x.code ? " · " + esc(x.code) : "") + '</div></div>' +
+        '<div class="row-badge" role="cell"><span class="badge ' + b.cls + '">' + b.label + '</span></div>' +
+        '<div class="row-time' + (neverLogged(x, state.rows) ? " is-flag" : "") + '" role="cell">' + esc(when) + '</div>' +
+        '<div role="cell" class="row-copy">' + copyBtn(x) + '</div>' +
         '</div>';
     }).join("");
-
-    $("tbody").innerHTML = html;
     $("empty").hidden = rows.length > 0;
     $("tableCount").textContent = "แสดง " + rows.length + " จาก " + state.rows.length + " โรงเรียน";
-
-    Array.prototype.forEach.call(document.querySelectorAll(".copy"), function (btn) {
-      btn.addEventListener("click", function () { copyLink(btn.getAttribute("data-code")); });
-    });
   }
 
-  function copyLink(code) {
+  function copyLink(code, btn) {
     var url = location.origin + location.pathname + "?school=" + encodeURIComponent(code);
-    var done = function () { toast("คัดลอกลิงก์โรงเรียนแล้ว"); };
+    var done = function () {
+      toast("คัดลอกลิงก์โรงเรียนแล้ว");
+      if (btn) {
+        var label = btn.querySelector("span");
+        btn.classList.add("is-done");
+        if (label) label.textContent = "คัดลอกแล้ว";
+        setTimeout(function () { btn.classList.remove("is-done"); if (label) label.textContent = "คัดลอกลิงก์"; }, 2000);
+      }
+    };
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(url).then(done, function () { fallbackCopy(url, done); });
     } else { fallbackCopy(url, done); }
@@ -373,15 +429,39 @@
     toastTimer = setTimeout(function () { t.hidden = true; }, 2200);
   }
 
+  /* มุมมองเฉพาะโรงเรียน: สองขั้นตอนตามลำดับจริง (โรงเรียนยืนยัน → ผอ. รับรอง) และบอกสิ่งที่ต้องทำต่อ */
   function renderSchoolView() {
-    var box = $("schoolView");
-    if (!state.mine) { box.hidden = true; return; }
-    var row = state.rows.filter(function (x) { return x.code === state.mine; })[0];
+    var box = $("mine");
+    var row = mineRow();
     if (!row) { box.hidden = true; state.mine = null; return; }
-    var b = BADGE[row.overall];
+    var rows = state.rows;
+    var s1done = row.overall !== "pending", s2done = row.overall === "approved";
+    var s1state = s1done
+      ? (row.tSchool ? "ยืนยันแล้ว " + fmt(row.tSchool) + " น." : "ยืนยันแล้ว")
+      : (rows.hasLogin ? (row.tLogin ? "ยังไม่ยืนยัน (เข้าใช้ล่าสุด " + fmt(row.tLogin) + " น.)" : "ยังไม่ยืนยัน และยังไม่เคยเข้าใช้ระบบ") : "ยังไม่ยืนยัน");
+    var s2state = s2done
+      ? (row.tDir ? "รับรองแล้ว " + fmt(row.tDir) + " น." : "รับรองแล้ว")
+      : (s1done ? "รอรับรอง" : "รับรองได้หลังโรงเรียนยืนยันข้อมูล");
+    var dl = deadlineText();
+    var next = s2done ? "โรงเรียนนี้ดำเนินการครบทั้งสองขั้นตอนแล้ว ไม่ต้องทำอะไรเพิ่ม"
+      : s1done ? "ขั้นต่อไป: ผอ.โรงเรียนเข้าระบบ DMC และรับรองข้อมูล" + (dl ? " ภายใน " + dl : "")
+        : "ขั้นต่อไป: Admin โรงเรียนเข้าระบบ DMC และกดยืนยันข้อมูล" + (dl ? " ภายใน " + dl : "");
+    function step(n, title, st, done, now) {
+      return '<li class="step' + (done ? " is-done" : "") + (now ? " is-now" : "") + (now && n === 2 ? " is-waiting" : "") + '">' +
+        '<span class="step-mark" aria-hidden="true">' + (done ? "✓" : n) + '</span>' +
+        '<div><p class="step-title">' + title + '</p><p class="step-state">' + esc(st) + '</p></div></li>';
+    }
     box.hidden = false;
-    box.innerHTML = '<span>มุมมองเฉพาะโรงเรียน: <strong>' + esc(row.name) + '</strong> · <span class="badge ' + b.cls + '">' + b.label + '</span></span>' +
-      '<a href="' + location.pathname + '">← ดูภาพรวมทั้งเขต</a>';
+    box.innerHTML =
+      '<p class="mine-zone">สหวิทยาเขต' + esc(row.zone) + (row.code ? " · รหัส " + esc(row.code) : "") + '</p>' +
+      '<h2 class="mine-name" id="mineName">' + esc(row.name) + '</h2>' +
+      '<div class="mine-body"><ol class="steps">' +
+      step(1, "Admin โรงเรียนยืนยันข้อมูล", s1state, s1done, !s1done) +
+      step(2, "ผอ.โรงเรียนรับรองข้อมูล", s2state, s2done, s1done && !s2done) +
+      '</ol><div class="mine-aside">' +
+      (row.note ? '<p class="mine-note">หมายเหตุ: ' + esc(row.note) + '</p>' : "") +
+      '<p class="mine-next' + (s2done ? " is-done" : "") + '">' + esc(next) + '</p>' +
+      '<div class="mine-actions">' + copyBtn(row) + '<a href="' + esc(location.pathname) + '">ดูภาพรวมทั้งเขต</a></div></div></div>';
   }
 
   function showError(msg) {
@@ -390,6 +470,8 @@
     box.innerHTML = "<strong>อ่านข้อมูลไม่ได้:</strong> " + esc(msg) +
       "<br>ตรวจสอบว่า (1) ชีทถูกแชร์ &quot;ทุกคนที่มีลิงก์มีสิทธิ์อ่าน&quot; (2) ชื่อแท็บ <code>" + esc(cfg.tabData) + "</code> ยังถูกต้อง (3) ค่า SHEET_ID ใน config.js ยังชี้ไฟล์เดิม";
     $("dataTime").textContent = "อ่านข้อมูลไม่สำเร็จ";
+    $("headline").textContent = "ยังแสดงสถานะไม่ได้ เพราะอ่านข้อมูลจากชีทไม่สำเร็จ";
+    document.body.classList.add("is-error");
   }
 
   function staleCheck(dataTime, fetchedAt) {
@@ -415,11 +497,16 @@
 
     Array.prototype.forEach.call(document.querySelectorAll(".pill"), function (p) {
       p.addEventListener("click", function () {
-        Array.prototype.forEach.call(document.querySelectorAll(".pill"), function (o) { o.classList.remove("is-active"); });
-        p.classList.add("is-active");
+        Array.prototype.forEach.call(document.querySelectorAll(".pill"), function (o) { o.setAttribute("aria-pressed", "false"); });
+        p.setAttribute("aria-pressed", "true");
         state.filter = p.getAttribute("data-filter");
         renderTable();
       });
+    });
+    /* ปุ่มคัดลอกลิงก์ทุกจุดใช้ตัวฟังเดียว (ปุ่มถูกสร้างใหม่ทุกครั้งที่เรนเดอร์) */
+    document.addEventListener("click", function (e) {
+      var btn = e.target.closest && e.target.closest(".copy");
+      if (btn) copyLink(btn.getAttribute("data-code"), btn);
     });
     $("search").addEventListener("input", function (e) { state.q = e.target.value; renderTable(); });
     setInterval(renderCountdown, 60000);
