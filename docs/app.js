@@ -89,6 +89,8 @@
   function statusOf(raw, time) {
     var v = String(raw || "").trim();
     if (v) {
+      /* "ยังไม่ยืนยัน" / "ยังไม่รับรอง" มีคำว่า ยืนยัน/รับรอง อยู่ด้วย ต้องจับคำปฏิเสธก่อน */
+      if (/ยังไม่|ไม่ได้|^ไม่/.test(v)) return "pending";
       if (/รับรอง/.test(v)) return "approved";
       if (/ยืนยัน/.test(v)) return "confirmed";
       return "pending";
